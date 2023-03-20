@@ -1,0 +1,122 @@
+---
+title: "lab5"
+author: "Victor Chen"
+date: "4/12/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+1.
+```{r}
+
+wonder.df <- read.table(
+  "../data/death4.txt",
+  sep="\t", header=TRUE)
+
+wonder.df <- wonder.df %>% filter(Notes!="Total", Ten.Year.Age.Groups!="< 1 year") %>%
+  filter(Ten.Year.Age.Groups!="1-4 years") %>%
+  filter(Ten.Year.Age.Groups!="5-14 years") %>%
+  filter(Ten.Year.Age.Groups!="85+ years") %>%
+  filter(Ten.Year.Age.Groups!="Not Stated") %>%
+  select(-c(Notes, Ten.Year.Age.Groups.Code, Gender.Code, Race.Code, Year.Code, Month.Code, Population, Crude.Rate))
+
+wonder.df <- wonder.df %>% 
+  group_by(Race) %>%
+  mutate(Death.Total = cumsum(Deaths))
+
+```
+
+2. Variables: 
+    Outcome: Deaths/Death.Total
+    Input: Ten.Year.Age.Group, Gender, Race, Year
+    
+   Hypothesis: 
+    White individuals are more likely to die from schizophrenia suicide than compared to other races.
+    Schizophrenia related suicide has become more common in recent years.
+
+3.
+```{r}
+
+wonder.df %>% 
+  ggplot(aes(x=Year, y=Death.Total, color=Ten.Year.Age.Groups, shape=Gender)) +
+  geom_point() +
+  facet_wrap(vars(cols=Race)) +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Age, Race, Gender, and Year") +
+  ylab("Total Deaths")
+
+```
+
+4.
+```{r}
+
+wonder.df %>% 
+  ggplot(aes(x=Year, y=Death.Total, color=Race)) +
+  geom_col() +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Race and Year") +
+  ylab("Total Deaths")
+
+```
+
+5.
+
+I decided to highlight the variables Race and Year specifically to focus in and see if there was any pattern. I chose these variables specifically as these variables are what I believed would have the most influence on deaths by schizophrenia related suicide. Programatically, I simplified my overall graph to only include the variables, Death.Total, Race, and Year.
+
+6.
+```{r}
+wonder.df %>% 
+  ggplot(aes(x=Year, y=Death.Total)) +
+  geom_col() +
+  facet_wrap(vars(cols=Race)) +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Race and Year") +
+  ylab("Total Deaths")
+
+```
+
+7. Both graphs I made follow my hypotheses by showing that not only do white individuals make for a majority of schizophrenia related suicides, but also that the rate of increase in schizophrenia related suicides for (in general but specifically for this race group) has been consistently increasing since 2010 and even before.
+
+8. 
+```{r}
+wonder.df2 <- wonder.df[!(wonder.df$Race == "White"),]
+
+wonder.df2 %>% 
+  ggplot(aes(x=Year, y=Death.Total, color=Race)) +
+  geom_col() +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Non-White Race and Year") +
+  ylab("Total Deaths")
+
+wonder.df2 %>% 
+  ggplot(aes(x=Year, y=Death.Total)) +
+  geom_col() +
+  facet_wrap(vars(cols=Race)) +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Non-White Race and Year") +
+  ylab("Total Deaths")
+```
+
+9. The new observations show that the increase in schizophrenia related suicides among non-white age groups was not as stationary as I had initially thought.
+
+10. The main big picture take away is that the majority of schizophrenia related suicides are white individuals, and that in general, schizophrenia related suicides have been on the rise over the past 10-20 years. Had the percentage column we had been given by the WONDER database actually worked, I would have been able to calculate a percentage for each race group and account for the fact that a larger majority of the U.S. population is white compared to other races. Nevertheless, I learned that the increase in schizophrenia related suicides among the white population is large enough to make the increase among the other races look almost non-existent when compared together.
+
+```{r}
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+wonder.2019 <- wonder.df %>%
+  filter(Year == 2019) %>%
+  filter(Ten.Year.Age.Groups == '25-34 years')
+fit1 <- lm(Deaths~Gender+Race, data = wonder.2019)
+
+tab_model(fit1, title = '2019')
+
+library(broom)
+library(kableExtra)
+tidy(fit1) %>% kable()
+```
+

@@ -1,0 +1,97 @@
+---
+title: "Final Project Individual Writeup"
+author: "Victor Chen"
+date: "4/22/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r echo=FALSE}
+
+wonder.df <- read.table(
+  "../data/death4.txt",
+  sep="\t", header=TRUE)
+
+wonder.df <- wonder.df %>% filter(Notes!="Total", Ten.Year.Age.Groups!="< 1 year") %>%
+  filter(Ten.Year.Age.Groups!="1-4 years") %>%
+  filter(Ten.Year.Age.Groups!="5-14 years") %>%
+  filter(Ten.Year.Age.Groups!="85+ years") %>%
+  filter(Ten.Year.Age.Groups!="Not Stated") %>%
+  select(-c(Notes, Ten.Year.Age.Groups.Code, Gender.Code, Race.Code, Year.Code, Month.Code, Population, Crude.Rate))
+
+wonder.df <- wonder.df %>% 
+  group_by(Race) %>%
+  mutate(Death.Total = cumsum(Deaths))
+
+```
+
+  For our final project, we decided to focus on schizophrenia related suicide data from the CDC Wonder database. For our variables, we wanted to see if the age, gender, calendar year (that they are living in), or race of a schizophrenic put them at a greater risk of committing suicide. The variables we chose from the Wonder database to use for this task were the input variables of "Ten.Year.Age.Group", "Gender", "Race", and "Year" as well as an outcome variable "Death" which I cumulatively summed by our race variable as "Death.Total" in my code using the "cumsum()" function. My first hypothesis was that white individuals make up for a majority of schizophrenia related suicides compared to other races. This hypothesis comes from the fact that whites are the largest race group in the U.S., and I believed that the racial demographics of the population of schizophrenia related suicides would have no reason to deviate to extensively from the racial demographics of the general U.S. population. My second hypothesis was that schizophrenia related suicide has become more common in recent years. I believed that with the general rise of mental health disorders in recent years, schizophrenia was no exception. First, I tackled the relationship between calendar year and total suicides in the figure below.
+
+```{r echo=FALSE}
+
+wonder.df %>% 
+  ggplot(aes(x=Year, y=Death.Total, color=Race)) +
+  geom_col() +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Race and Year") +
+  ylab("Total Deaths")
+
+```
+
+I created a fairly simple bar chart of "Year" vs. "Death.Total" using the "ggplot" library. I also included the "Race" variable as a color aesthetic to give myself a general idea of the variable breakdown for future analysis. Contradictory to my hypothesis, I discovered that the rate of increase in schizophrenia related suicides had not increased, but instead has remained fairly consistent over the past 21 years (the data set provides data from 1999-2020). This does not match the trend in rate of all U.S. suicuides, which has increased by 32.5% from 1999 to 2018 (https://www.nimh.nih.gov/health/statistics/suicide). The correlation between year and total deaths is pretty straightforward: the more recent the year, the more schizophrenia related suicides have occurred. My second task was to observe the relationship between race and total suicides, which I have tackled in the figure below.
+
+```{r echo=FALSE}
+wonder.df %>% 
+  ggplot(aes(x=Year, y=Death.Total)) +
+  geom_col() +
+  facet_wrap(vars(cols=Race)) +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Race and Year") +
+  ylab("Total Deaths")
+
+```
+  
+  I created this graph similarly to the first one, but instead of setting the race to the color, I faceted the graph by the race variable in order to make the comparison between different races more obvious. Unlike the first figure, this graph supports my hypothesis. Both the number and increase rate of total deaths for the white race group is so large that it makes the data for the other race groups look small and almost stationary. The correlation between being white and schizophrenia related suicide seems to be more positive than the correlation of the other races. This can be explained by the fact that the total population of total white individuals and white suicides is much larger than other races. In order to get a better idea of the trends of the other race groups, I created a second figure for "Race" below.
+
+```{r echo=FALSE}
+wonder.df2 <- wonder.df[!(wonder.df$Race == "White"),]
+
+wonder.df2 %>% 
+  ggplot(aes(x=Year, y=Death.Total)) +
+  geom_col() +
+  facet_wrap(vars(cols=Race)) +
+  ggtitle("Total Schitzophrenia Related Suicide Deaths by Non-White Race and Year") +
+  ylab("Total Deaths")
+```
+  
+  The new observations show that the increase in schizophrenia related suicides among non-white individuals was not as stationary as the previous figure had originally led me to believe.
+  
+  The final task that our group agreed on was to do a regression on the 2 variables we believed to have the strongest relationship with schizophrenia related suicide: "Race" and "Gender". The results of said regression are as shown below.
+
+```{r echo=FALSE}
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+wonder.2019 <- wonder.df %>%
+  filter(Year == 2019) %>%
+  filter(Ten.Year.Age.Groups == '25-34 years')
+fit1 <- lm(Deaths~Gender+Race, data = wonder.2019)
+
+tab_model(fit1, title = '2019')
+```
+
+
+  We chose to do regression on the years 2020 and 2019 in order to account for any effect COVID-19 may have had on the data in 2020. I was responsible for the 2019 regression. I filtered my data to include only observations where the year was 2019 and the age was 25-34 years (the agreed constant value for age where the most suicides occur). I then used the "lm()" function to perform the deaths vs. race and gender regression on this new filtered dataset as well as the "sjPlot" library to show the results. My group mate was the one who did most of the analysis on Gender, and her hypothesis stated that there are more deaths by suicide by those who identify as male. This was proven correct for the year 2019, as "Gender = Male" has a positive estimate with the entire confidence interval being a range of positive values. The P-value is also 0.001 which is less than 0.05. Thus, we can say that there is a significant positive correlation between being a Male schizophrenic and committing suicide, supporting the gender hypothesis. My race hypothesis was also proven correct, as not only is the estimate for Race = White more positive than the estimates for the other races, but this is the only race that has a completely positive confidence interval. This is also the only race with a p value < 0.05. Thus, we can also say that there is a significant positive correlation between being a White schizophrenic and committing suicide more so than for other races. Looking back on it, I understand that this regression is flawed due to the predicted variable being too reliant on differences on population size. Doing this regression with a predicted variable representing a rate or proportion would have been more useful.
+
+
+
+
+
+
+
+
+
